@@ -1,0 +1,101 @@
+{
+	"info": {
+		"name": "Payment Portal API v2 (Alt)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ] },
+	"variable": [
+		{ "key": "baseUrl", "value": "http://localhost:5000" },
+		{ "key": "token", "value": "" }
+	],
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Register (Alt User)",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": { "mode": "raw", "raw": "{\n  \"username\": \"alex.smith\",\n  \"fullName\": \"Alex Smith\",\n  \"accountNumber\": \"223456789012\",\n  \"idNumber\": \"9001015009086\",\n  \"password\": \"P@ssw0rd!\",\n  \"role\": \"customer\"\n}" },
+						"url": "{{baseUrl}}/api/auth/register"
+					}
+				},
+				{
+					"name": "Login (Alt User)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const data = pm.response.json();",
+									"if (data && data.token) { pm.environment.set('token', data.token); pm.collectionVariables.set('token', data.token); }"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": { "mode": "raw", "raw": "{\n  \"username\": \"alex.smith\",\n  \"accountNumber\": \"223456789012\",\n  \"password\": \"P@ssw0rd!\"\n}" },
+						"url": "{{baseUrl}}/api/auth/login"
+					}
+				}
+			]
+		},
+		{
+			"name": "Payments (Customer)",
+			"item": [
+				{
+					"name": "Initiate International Payment (Alt)",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": { "mode": "raw", "raw": "{\n  \"amount\": 1500.75,\n  \"currency\": \"USD\",\n  \"recipientName\": \"Globex Corp\",\n  \"recipientAccount\": \"998877665544\",\n  \"swiftCode\": \"EFGHUS33\"\n}" },
+						"url": "{{baseUrl}}/api/payments/international"
+					},
+					"event": [
+						{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+							"const res = pm.response.json();",
+							"const id = res && res.transaction && res.transaction.id;",
+							"if (id) { pm.collectionVariables.set('transaction_id', id); }"
+						] } }
+					]
+				},
+				{
+					"name": "Verify SWIFT Code (Alt)",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": { "mode": "raw", "raw": "{\n  \"swiftCode\": \"EFGHUS33\"\n}" },
+						"url": "{{baseUrl}}/api/payments/verify-swift"
+					}
+				},
+				{
+					"name": "Transaction History",
+					"request": { "method": "GET", "url": "{{baseUrl}}/api/payments/history" }
+				}
+			]
+		},
+		{
+			"name": "Payments (Employee)",
+			"item": [
+				{
+					"name": "List Pending Transactions",
+					"request": { "method": "GET", "url": "{{baseUrl}}/api/payments/pending" }
+				},
+				{
+					"name": "Verify Transaction",
+					"request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "url": "{{baseUrl}}/api/payments/pending/{{transaction_id}}/verify", "body": { "mode": "raw", "raw": "{\n  \"id\": \"{{transaction_id}}\"\n}" } }
+				},
+				{
+					"name": "Submit Transaction to SWIFT",
+					"request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "url": "{{baseUrl}}/api/payments/pending/{{transaction_id}}/submit", "body": { "mode": "raw", "raw": "{\n  \"id\": \"{{transaction_id}}\"\n}" } }
+				}
+			]
+		}
+	]
+}
+
+

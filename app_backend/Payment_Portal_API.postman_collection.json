@@ -1,0 +1,145 @@
+{
+    "info": {
+		"name": "Payment Portal API v2",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+    "auth": {
+        "type": "bearer",
+        "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ]
+    },
+	"variable": [
+		{ "key": "baseUrl", "value": "http://localhost:5000" },
+		{ "key": "token", "value": "" }
+	],
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Register",
+                    "request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": { "mode": "raw", "raw": "{\n  \"username\": \"john.doe\",\n  \"fullName\": \"John Doe\",\n  \"accountNumber\": \"123456789012\",\n  \"idNumber\": \"8001015009087\",\n  \"password\": \"P@ssw0rd!\",\n  \"role\": \"customer\"\n}" },
+						"url": "{{baseUrl}}/api/auth/register"
+					}
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const data = pm.response.json();",
+									"if (data && data.token) { pm.environment.set('token', data.token); pm.collectionVariables.set('token', data.token); }"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": { "mode": "raw", "raw": "{\n  \"username\": \"john.doe\",\n  \"accountNumber\": \"123456789012\",\n  \"password\": \"P@ssw0rd!\"\n}" },
+						"url": "{{baseUrl}}/api/auth/login"
+					}
+				},
+                {
+					"name": "Verify Session",
+                    "request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/auth/verify"
+					}
+				},
+				{
+					"name": "Logout",
+                    "request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/api/auth/logout"
+					}
+				}
+			]
+		},
+		{
+			"name": "Payments (Customer)",
+			"item": [
+				{
+					"name": "Initiate International Payment (Pending)",
+                    "request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": { "mode": "raw", "raw": "{\n  \"amount\": 1000.50,\n  \"currency\": \"ZAR\",\n  \"recipientName\": \"Acme Imports\",\n  \"recipientAccount\": \"987654321098\",\n  \"swiftCode\": \"ABCDZAJJ\"\n}" },
+						"url": "{{baseUrl}}/api/payments/international"
+					},
+					"event": [
+						{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+							"const res = pm.response.json();",
+							"const id = res && res.transaction && res.transaction.id;",
+							"if (id) { pm.collectionVariables.set('transaction_id', id); }"
+						] } }
+					]
+				},
+				{
+					"name": "Verify SWIFT Code",
+                    "request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": { "mode": "raw", "raw": "{\n  \"swiftCode\": \"ABCDZAJJ\"\n}" },
+						"url": "{{baseUrl}}/api/payments/verify-swift"
+					}
+				},
+				{
+					"name": "Transaction History",
+                    "request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/payments/history"
+					}
+				},
+				{
+					"name": "List Payment Methods",
+                    "request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/payments/methods"
+					}
+				},
+				{
+					"name": "Add Payment Method",
+                    "request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": { "mode": "raw", "raw": "{\n  \"type\": \"swift\",\n  \"accountNumber\": \"987654321098\",\n  \"swiftCode\": \"ABCDZAJJ\",\n  \"bankName\": \"Acme Bank\",\n  \"bankAddress\": \"1 Main St, Cape Town\"\n}" },
+						"url": "{{baseUrl}}/api/payments/methods"
+					}
+				}
+			]
+		},
+		{
+			"name": "Payments (Employee)",
+			"item": [
+				{
+					"name": "List Pending Transactions",
+                    "request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/api/payments/pending"
+					}
+				},
+				{
+					"name": "Verify Transaction",
+                    "request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"url": "{{baseUrl}}/api/payments/pending/{{transaction_id}}/verify",
+						"body": { "mode": "raw", "raw": "{\n  \"id\": \"{{transaction_id}}\"\n}" }
+					}
+				},
+				{
+					"name": "Submit Transaction to SWIFT",
+                    "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "url": "{{baseUrl}}/api/payments/pending/{{transaction_id}}/submit", "body": { "mode": "raw", "raw": "{\n  \"id\": \"{{transaction_id}}\"\n}" } }
+				}
+			]
+		}
+	]
+}
+
+

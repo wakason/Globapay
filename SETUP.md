@@ -20,7 +20,7 @@ CREATE DATABASE payment_portal;
 
 Alternatively, you can use the automated setup script:
 ```powershell
-cd C:\GloBaPay\app_backend
+cd C:\Users\Administrator\Desktop\GloBaPay\app_backend
 .\scripts\setup-env.ps1 -CreateDb
 ```
 
