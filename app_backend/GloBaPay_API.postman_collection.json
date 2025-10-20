@@ -1,0 +1,159 @@
+{
+	"info": {
+		"name": "GloBaPay API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_postman_id": "a3b7f4f4-2f7d-4d7a-9b2c-5e6a1b2c3d4e"
+	},
+	"variable": [
+		{ "key": "baseUrl", "value": "http://localhost:5000" },
+		{ "key": "token", "value": "" },
+		{ "key": "paymentMethodId", "value": "" },
+		{ "key": "transactionId", "value": "" }
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": { "type": "text/javascript", "exec": [
+				"// Attach bearer token if available",
+				"if (pm.collectionVariables.get('token')) {",
+				"    pm.request.headers.add({ key: 'Authorization', value: 'Bearer ' + pm.collectionVariables.get('token') });",
+				"}"
+			] }
+		}
+	],
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"url": "{{baseUrl}}/api/auth/register",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"testuser01\",\n  \"fullName\": \"Test User\",\n  \"accountNumber\": \"1234567890\",\n  \"idNumber\": \"8001015009087\",\n  \"password\": \"Test!2345\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"url": "{{baseUrl}}/api/auth/login",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"testuser01\",\n  \"password\": \"Test!2345\"\n}"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200 && pm.response.json().token) {",
+									"  pm.collectionVariables.set('token', pm.response.json().token);",
+									"}"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": "{{baseUrl}}/api/auth/logout"
+					}
+				},
+				{
+					"name": "Verify Session",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/api/auth/verify"
+					}
+				}
+			]
+		},
+		{
+			"name": "Payments",
+			"item": [
+				{
+					"name": "Initiate International Payment",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"url": "{{baseUrl}}/api/payments/international",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 100.5,\n  \"currency\": \"USD\",\n  \"recipientName\": \"John Doe\",\n  \"recipientAccount\": \"123456789012\",\n  \"swiftCode\": \"DEUTDEFF\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Get Transaction History",
+					"request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/payments/history" }
+				},
+				{
+					"name": "Verify SWIFT Code",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"url": "{{baseUrl}}/api/payments/verify-swift",
+						"body": { "mode": "raw", "raw": "{\n  \"swiftCode\": \"DEUTDEFF\"\n}" }
+					}
+				},
+				{
+					"name": "Get Payment Methods",
+					"request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/payments/methods" }
+				},
+				{
+					"name": "Add Payment Method",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"url": "{{baseUrl}}/api/payments/methods",
+						"body": { "mode": "raw", "raw": "{\n  \"type\": \"swift\",\n  \"accountNumber\": \"1234567890\",\n  \"swiftCode\": \"DEUTDEFF\"\n}" }
+					}
+				},
+				{
+					"name": "Delete Payment Method",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": "{{baseUrl}}/api/payments/methods/{{paymentMethodId}}",
+						"description": "Set collection variable paymentMethodId (copy an id from Get Payment Methods)."
+					}
+				},
+				{
+					"name": "List Pending Transactions (Employee)",
+					"request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/payments/pending" }
+				},
+				{
+					"name": "Verify Pending Transaction (Employee)",
+					"request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/payments/pending/{{transactionId}}/verify" }
+				},
+				{
+					"name": "Submit Pending Transaction to SWIFT (Employee)",
+					"request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/payments/pending/{{transactionId}}/submit" }
+				}
+			]
+		},
+		{
+			"name": "Health",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/health" }
+				}
+			]
+		}
+	]
+}
+
+

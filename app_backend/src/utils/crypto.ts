@@ -21,14 +21,24 @@ export function encryptField(plainText?: string): string | null {
 
 export function decryptField(cipherText?: string | null): string | null {
     if (!cipherText) return null;
-    const data = Buffer.from(cipherText, 'base64');
-    const iv = data.subarray(0, 12);
-    const authTag = data.subarray(12, 28);
-    const enc = data.subarray(28);
-    const decipher = crypto.createDecipheriv(algorithm, getKey(), iv);
-    decipher.setAuthTag(authTag);
-    const decrypted = Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf8');
-    return decrypted;
+    try {
+        const data = Buffer.from(cipherText, 'base64');
+        // If decoding produced very short data, treat as plaintext and return as-is
+        if (data.length < 16) {
+            return cipherText;
+        }
+        const iv = data.subarray(0, 12);
+        const authTag = data.subarray(12, 28);
+        const enc = data.subarray(28);
+        const decipher = crypto.createDecipheriv(algorithm, getKey(), iv);
+        decipher.setAuthTag(authTag);
+        const decrypted = Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf8');
+        return decrypted;
+    } catch (_err) {
+        // Backward-compat: if value is not valid ciphertext for current key/format,
+        // assume it was stored in plaintext and return it raw.
+        return cipherText;
+    }
 }
 
 
