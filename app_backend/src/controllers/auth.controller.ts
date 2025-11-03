@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../config/database';
 import { User } from '../models/User';
+import { AuditLog } from '../models/AuditLog';
 
 export const register = async (req: Request, res: Response) => {
     const userRepository = AppDataSource.getRepository(User);
@@ -67,6 +68,16 @@ export const login = async (req: Request, res: Response) => {
         });
 
         if (!user) {
+            // Audit failed login (unknown user)
+            try {
+                const auditRepo = AppDataSource.getRepository(AuditLog);
+                const log = auditRepo.create({
+                    actorUserId: 'anonymous',
+                    action: 'login_failed',
+                    details: { username, reason: 'user_not_found', ip: req.ip }
+                });
+                await auditRepo.save(log);
+            } catch (_) { /* ignore audit failures */ }
             return res.status(401).json({
                 success: false,
                 message: 'Invalid credentials'
@@ -78,10 +89,27 @@ export const login = async (req: Request, res: Response) => {
         // Validate password
         const isValidPassword = await user.validatePassword(password);
         if (!isValidPassword) {
+            // Audit failed login (bad password)
+            try {
+                const auditRepo = AppDataSource.getRepository(AuditLog);
+                const log = auditRepo.create({
+                    actorUserId: user.id,
+                    action: 'login_failed',
+                    details: { username, reason: 'bad_password', ip: req.ip }
+                });
+                await auditRepo.save(log);
+            } catch (_) { /* ignore audit failures */ }
             return res.status(401).json({
                 success: false,
                 message: 'Invalid credentials'
             });
+        }
+
+        // Rehash with new cost/pepper if policy changed
+        if (typeof (user as any).needsRehash === 'function' && (user as any).needsRehash()) {
+            user.password = password;
+            await user.hashPassword();
+            await userRepository.save(user);
         }
 
         // Update last login

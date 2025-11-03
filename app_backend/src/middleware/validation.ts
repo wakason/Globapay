@@ -5,11 +5,13 @@ import { body, validationResult } from 'express-validator';
 export const validateRegistration = [
     body('username')
         .trim()
+        .escape()
         .isLength({ min: 3, max: 30 })
         .matches(/^[a-zA-Z0-9_.-]+$/)
         .withMessage('Username must be 3-30 chars, alphanumeric plus _ . - allowed'),
     body('fullName')
         .trim()
+        .escape()
         .isLength({ min: 2, max: 50 })
         .withMessage('Full name must be between 2 and 50 characters'),
     body('accountNumber')
@@ -34,6 +36,7 @@ export const validateRegistration = [
 export const validateLogin = [
     body('username')
         .trim()
+        .escape()
         .notEmpty()
         .withMessage('Username is required'),
     body('password')
@@ -53,6 +56,7 @@ export const validatePayment = [
         .withMessage('Invalid currency'),
     body('recipientName')
         .trim()
+        .escape()
         .isLength({ min: 2, max: 50 })
         .withMessage('Recipient name must be between 2 and 50 characters'),
     body('recipientAccount')

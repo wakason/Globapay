@@ -1,0 +1,76 @@
+# This workflow runs security and quality checks on push/PR
+name: security-ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend-frontend-checks:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        workdir: [app_backend, .]
+    defaults:
+      run:
+        working-directory: ${{ matrix.workdir }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: |
+            app_backend/package-lock.json
+            package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Type check (if TS)
+        run: |
+          if [ -f tsconfig.json ]; then npm run -s build --if-present; fi
+      - name: Lint (if configured)
+        run: npm run -s lint --if-present
+      - name: Test (if configured)
+        run: npm test --if-present -- --ci --watchAll=false
+      - name: Build (if configured)
+        run: npm run -s build --if-present
+      - name: npm audit (high and above)
+        run: npm audit --audit-level=high || true
+
+  codeql:
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+    uses: github/codeql-action/.github/workflows/codeql.yml@v3
+    with:
+      languages: javascript
+
+  zap-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install backend deps
+        working-directory: app_backend
+        run: npm ci && npm run build
+      - name: Start backend (HTTPs)
+        working-directory: app_backend
+        run: |
+          mkdir -p certificates
+          # ZAP trusts its own CA; we run http for scan if certs absent
+          node ../scripts/generate-certs.js || true
+          node dist/index.js &
+          echo $! > ../backend.pid
+          sleep 5
+      - name: ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: 'http://localhost:5000/api/health'
+          fail_action: false
+      - name: Stop backend
+        if: always()
+        run: |
+          kill $(cat backend.pid) || true

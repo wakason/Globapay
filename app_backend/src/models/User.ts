@@ -4,6 +4,19 @@ import { PaymentMethod } from './PaymentMethod';
 import bcrypt from 'bcryptjs';
 import { encryptField, decryptField } from '../utils/crypto';
 
+function getBcryptCost(): number {
+    const parsed = parseInt(process.env.BCRYPT_COST || '12', 10);
+    if (!Number.isFinite(parsed)) return 12;
+    // Reasonable bounds to avoid accidental extreme costs
+    if (parsed < 10) return 10;
+    if (parsed > 15) return 15;
+    return parsed;
+}
+
+function getPepper(): string {
+    return process.env.PEPPER || '';
+}
+
 export enum UserRole {
     CUSTOMER = 'customer',
     EMPLOYEE = 'employee'
@@ -56,12 +69,26 @@ export class User {
 
     async hashPassword(): Promise<void> {
         if (this.password) {
-            const salt = await bcrypt.genSalt(10);
-            this.password = await bcrypt.hash(this.password, salt);
+            const salt = await bcrypt.genSalt(getBcryptCost());
+            const peppered = `${this.password}${getPepper()}`;
+            this.password = await bcrypt.hash(peppered, salt);
         }
     }
 
     async validatePassword(password: string): Promise<boolean> {
-        return bcrypt.compare(password, this.password);
+        const peppered = `${password}${getPepper()}`;
+        return bcrypt.compare(peppered, this.password);
+    }
+
+    needsRehash(): boolean {
+        try {
+            const currentRounds = (bcrypt as any).getRounds
+                ? (bcrypt as any).getRounds(this.password)
+                : undefined;
+            if (typeof currentRounds !== 'number') return false;
+            return currentRounds !== getBcryptCost();
+        } catch (_err) {
+            return false;
+        }
     }
 }

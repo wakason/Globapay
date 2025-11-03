@@ -87,6 +87,16 @@ cd ..\scripts
 node generate-certs.js
 ```
 
+4. Security-related environment variables (Backend `.env`):
+```
+# Bcrypt cost factor (10-15)
+BCRYPT_COST=12
+# Optional server-side pepper appended to passwords before hashing
+PEPPER=change_me_to_a_strong_secret
+# CORS allowlist (comma separated)
+CORS_ORIGINS=https://localhost:3000,https://localhost:5001
+```
+
 ## Frontend Setup (root folder)
 
 1. Install dependencies:
@@ -155,8 +165,9 @@ SWIFT_API_KEY=dummy
 HTTPS=true
 ```
 
-- All traffic is served over HTTPS
-- Passwords are hashed and salted
-- Sensitive fields are encrypted at rest
-- Input validation is enforced
-- Security headers are enabled
+- All traffic is served over HTTPS. Backend prefers HTTPS on port 5000 when certificates are present.
+- Passwords are hashed and salted with bcrypt and a server-side pepper; cost is env-driven and rehashing occurs on login if policy changes.
+- Sensitive fields are encrypted at rest with AES-256-GCM.
+- Input validation and sanitization are enforced; payload sizes limited to 200KB and JSON-only for API writes.
+- Security headers (Helmet + HSTS), CORS allowlist, HPP, and rate limiting are enabled.
+- CI pipeline runs security checks (audit, CodeQL, ZAP) on push/PR.
