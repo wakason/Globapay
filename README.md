@@ -161,8 +161,11 @@ HTTPS=true
 
 ## Security Notes
 
-- All traffic is served over HTTPS
-- Passwords are hashed and salted
-- Sensitive fields are encrypted at rest
-- Input validation is enforced
-- Security headers are enabled
+- All traffic is served over HTTPS (backend attempts HTTPS with `certificates/localhost*.pem`; falls back to HTTP if missing). Use `npm run generate-certs` at repo root to create them.
+- Passwords are hashed and salted with bcrypt and a server-side pepper. Cost factor is configurable via `BCRYPT_COST`.
+- Sensitive fields are encrypted at rest using AES-256-GCM with `FIELD_ENCRYPTION_KEY`.
+- Input validation and sanitization is enforced via `express-validator` with strict regexes and escaping.
+- Security headers are enabled (Helmet + HSTS) and HTTP Parameter Pollution is mitigated.
+- Global and per-route rate limiting is configured (login brute-force protection).
+- CORS origins are allowlisted via `CORS_ORIGINS` (comma-separated).
+- CI pipeline runs lint/build/tests, npm audit, CodeQL, and ZAP baseline on push/PR.
