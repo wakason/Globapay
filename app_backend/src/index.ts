@@ -105,59 +105,67 @@ app.get('/api/health', (_req, res) => {
 // Error handling
 app.use(errorHandler);
 
-// Initialize database connection
-AppDataSource.initialize()
-    .then(() => {
-        console.log('Data Source has been initialized!');
-        // Seed employees if provided
-        const seed = async () => {
-            const userRepo = AppDataSource.getRepository(User);
-            const employeesEnv = process.env.SEED_EMPLOYEES || '';
-            if (!employeesEnv) return;
-            const list = employeesEnv.split(',').map(s => s.trim()).filter(Boolean);
-            for (const entry of list) {
-                // Format: username:fullName:accountNumber:idNumber:password
-                const parts = entry.split(':');
-                if (parts.length < 5) continue;
-                const [username, fullName, accountNumber, idNumber, password] = parts;
-                const exists = await userRepo.findOne({ where: { username } });
-                if (exists) continue;
-                const u = userRepo.create({ username, fullName, accountNumber, idNumber, password, role: UserRole.EMPLOYEE });
-                await u.hashPassword();
-                await userRepo.save(u);
-                console.log(`Seeded employee ${username}`);
-            }
-        };
-        seed().catch(err => console.error('Seeding employees failed', err));
-        // Start server
-        const port = Number(process.env.PORT) || 5000;
-        // Attempt to start HTTPS server if certificates are present
-        try {
-            const certDir = path.join(__dirname, '..', '..', 'certificates');
-            const keyPath = path.join(certDir, 'localhost-key.pem');
-            const certPath = path.join(certDir, 'localhost.pem');
-            if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
-                const credentials = {
-                    key: fs.readFileSync(keyPath),
-                    cert: fs.readFileSync(certPath)
-                };
-                const httpsServer = https.createServer(credentials, app);
-                httpsServer.listen(port, () => {
-                    console.log(`HTTPS server running on https://localhost:${port}`);
-                });
-            } else {
-                app.listen(port, () => {
-                    console.log(`HTTP server running on http://localhost:${port} (certificates not found)`);
-                });
-            }
-        } catch (err) {
-            console.error('Failed to start HTTPS server, falling back to HTTP:', err);
+async function startServer() {
+    const port = Number(process.env.PORT) || 5000;
+    try {
+        const certDir = path.join(__dirname, '..', '..', 'certificates');
+        const keyPath = path.join(certDir, 'localhost-key.pem');
+        const certPath = path.join(certDir, 'localhost.pem');
+        if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+            const credentials = {
+                key: fs.readFileSync(keyPath),
+                cert: fs.readFileSync(certPath)
+            };
+            const httpsServer = https.createServer(credentials, app);
+            httpsServer.listen(port, () => {
+                console.log(`HTTPS server running on https://localhost:${port}`);
+            });
+        } else {
             app.listen(port, () => {
-                console.log(`HTTP server running on http://localhost:${port}`);
+                console.log(`HTTP server running on http://localhost:${port} (certificates not found)`);
             });
         }
-    })
-    .catch((error) => {
-        console.error('Error during Data Source initialization:', error);
-        process.exit(1);
-    });
+    } catch (err) {
+        console.error('Failed to start HTTPS server, falling back to HTTP:', err);
+        app.listen(port, () => {
+            console.log(`HTTP server running on http://localhost:${port}`);
+        });
+    }
+}
+
+// Initialize database connection unless explicitly skipped (e.g., CI security scans)
+if (process.env.SKIP_DB_INIT === '1') {
+    console.warn('SKIP_DB_INIT=1 set; starting server without database connection.');
+    startServer();
+} else {
+    AppDataSource.initialize()
+        .then(() => {
+            console.log('Data Source has been initialized!');
+            // Seed employees if provided
+            const seed = async () => {
+                const userRepo = AppDataSource.getRepository(User);
+                const employeesEnv = process.env.SEED_EMPLOYEES || '';
+                if (!employeesEnv) return;
+                const list = employeesEnv.split(',').map(s => s.trim()).filter(Boolean);
+                for (const entry of list) {
+                    // Format: username:fullName:accountNumber:idNumber:password
+                    const parts = entry.split(':');
+                    if (parts.length < 5) continue;
+                    const [username, fullName, accountNumber, idNumber, password] = parts;
+                    const exists = await userRepo.findOne({ where: { username } });
+                    if (exists) continue;
+                    const u = userRepo.create({ username, fullName, accountNumber, idNumber, password, role: UserRole.EMPLOYEE });
+                    await u.hashPassword();
+                    await userRepo.save(u);
+                    console.log(`Seeded employee ${username}`);
+                }
+            };
+            seed().catch(err => console.error('Seeding employees failed', err));
+            // Start server
+            startServer();
+        })
+        .catch((error) => {
+            console.error('Error during Data Source initialization:', error);
+            process.exit(1);
+        });
+}
