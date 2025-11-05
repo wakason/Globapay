@@ -23,11 +23,8 @@ async function seedInitialData() {
 
         const userRepository = AppDataSource.getRepository(User);
 
-        // Clear existing data in development only
-        if (process.env.NODE_ENV === 'development') {
-            console.log('⚠️  Development mode: Clearing existing users...');
-            await userRepository.clear();
-        }
+        // In development, we'll just skip existing users rather than clearing
+        // (clearing would fail due to foreign key constraints)
 
         // Create test customer accounts
         const customers = [

@@ -29,7 +29,9 @@ app.use((req, res, next) => {
     next();
 });
 // CORS allowlist support via env CORS_ORIGINS (comma-separated)
-const corsOrigins = (process.env.CORS_ORIGINS || process.env.CORS_ORIGIN || 'https://localhost:3000,https://localhost:5001')
+// Default includes both HTTP and HTTPS for development
+const defaultOrigins = 'https://localhost:3000,http://localhost:3000,https://localhost:5001,http://localhost:5001';
+const corsOrigins = (process.env.CORS_ORIGINS || process.env.CORS_ORIGIN || defaultOrigins)
     .split(',')
     .map(o => o.trim())
     .filter(Boolean);
@@ -37,6 +39,7 @@ app.use(cors({
     origin: (origin, callback) => {
         if (!origin) return callback(null, true);
         if (corsOrigins.includes(origin)) return callback(null, true);
+        console.warn(`CORS: Rejected origin '${origin}'. Allowed origins:`, corsOrigins);
         return callback(new Error('CORS origin not allowed'));
     },
     credentials: true
