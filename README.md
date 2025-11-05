@@ -24,20 +24,19 @@ cd C:\GloBaPay\app_backend
 .\scripts\setup-env.ps1 -CreateDb
 ```
 
-5. Initialize the database and seed initial data:
+5. Initialize the database using migrations:
 ```powershell
-# Build TypeScript files first
-npm run build
-
-# Run database migrations and seed initial employees
-npm run migration:run
-npm run seed:employees
+# Run database migrations and seed initial data
+cd app_backend
+npm run db:setup
 ```
 
 This will:
-- Create database tables
-- Set up proper indexes and constraints
-- Create initial employee accounts
+- Create all database tables with proper schema
+- Set up indexes and foreign keys for optimal performance
+- Seed test customer and employee accounts
+
+**Note**: We use TypeORM migrations for schema management. See `app_backend/docs/MIGRATIONS.md` for details.
 
 ## Backend Setup (app_backend folder)
 
@@ -131,6 +130,34 @@ SWIFT_API_KEY=dummy
 HTTPS=true
 ```
 
+## Database Migrations
+
+GloBaPay uses TypeORM migrations for database schema management. This provides version control for your database and ensures safe, reproducible deployments.
+
+### Common Migration Commands
+
+```powershell
+# View migration status
+npm run migration:show
+
+# Run pending migrations
+npm run migration:run
+
+# Rollback last migration
+npm run migration:revert
+
+# Reset database (development only - DELETES ALL DATA)
+npm run db:reset
+
+# Create new migration after model changes
+npm run migration:generate -- src/migrations/YourMigrationName
+```
+
+### For More Information
+
+- **Quick Reference**: `app_backend/docs/MIGRATION-QUICK-REFERENCE.md`
+- **Full Guide**: `app_backend/docs/MIGRATIONS.md`
+
 ## Troubleshooting
 
 1. If you see certificate errors:
@@ -147,13 +174,19 @@ HTTPS=true
    - Verify DB_* environment variables in .env file
    - Check MySQL port in XAMPP (default: 3306)
    - Make sure no other MySQL instance is running
+   - Try `npm run migration:show` to test database connection
 
-4. For auth issues:
+4. For migration issues:
+   - Check database exists: `CREATE DATABASE payment_portal;`
+   - Ensure migrations directory exists: `app_backend/src/migrations/`
+   - See `app_backend/docs/MIGRATIONS.md` for troubleshooting guide
+
+5. For auth issues:
    - Run setup-env.ps1 script again to regenerate JWT_SECRET
    - Clear browser cache and cookies
    - Check Windows Environment Variables are set correctly
 
-5. If PowerShell scripts fail:
+6. If PowerShell scripts fail:
    - Run this command as Administrator to allow script execution:
      ```powershell
      Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
