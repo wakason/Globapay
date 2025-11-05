@@ -38,13 +38,23 @@ jobs:
         run: npm audit --audit-level=high || true
 
   codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
     permissions:
-      security-events: write
       contents: read
+      security-events: write
       actions: read
-    uses: github/codeql-action/.github/workflows/codeql.yml@v3
-    with:
-      languages: javascript
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
 
   zap-baseline:
     runs-on: ubuntu-latest
@@ -56,13 +66,13 @@ jobs:
       - name: Install backend deps
         working-directory: app_backend
         run: npm ci && npm run build
-      - name: Start backend (HTTPs)
+      - name: Start backend (HTTPs without DB)
         working-directory: app_backend
         run: |
           mkdir -p certificates
           # ZAP trusts its own CA; we run http for scan if certs absent
           node ../scripts/generate-certs.js || true
-          node dist/index.js &
+          SKIP_DB_INIT=1 NODE_ENV=test node dist/index.js &
           echo $! > ../backend.pid
           sleep 5
       - name: ZAP Baseline Scan
