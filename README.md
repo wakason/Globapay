@@ -11,6 +11,27 @@
 
 GloBaPay is a secure international payment portal system designed for an international bank's internal operations. The system allows customers to initiate international payments through a customer-facing portal, which are then verified and processed by bank employees through a dedicated employee portal.
 
+## ⚡ Quick Start
+
+**Already set up?** Jump to [Running the Application](#running-the-application) section.
+
+**First time?** Follow the complete [Setup and Installation Guide](#-complete-setup-and-installation-guide) below.
+
+**Quick Commands**:
+```powershell
+# 1. Start MySQL in XAMPP Control Panel
+# 2. Start Backend
+cd app_backend
+npm run dev
+
+# 3. Start Frontend (new terminal)
+cd C:\Users\Administrator\Desktop\GloBaPay
+npm start
+
+# Access: https://localhost:3000
+# Test Accounts: See [Test Accounts](#-test-accounts) section
+```
+
 ### Key Features
 
 ✅ **Customer Portal**
@@ -137,9 +158,12 @@ This project implements comprehensive security measures as required by the APDS7
 
 6. ✅ **DevSecOps Pipeline**
    - CircleCI configuration with SonarQube integration
+   - Automated security hotspot detection
+   - Code smell analysis and maintainability ratings
    - GitHub Actions for automated security scanning
    - npm audit for dependency vulnerabilities
-   - Location: `.circleci/config.yml`, `.github/workflows/security-ci.yml`
+   - Location: `.circleci/config.yml`, `.github/workflows/security-ci.yml`, `sonar-project.properties`
+   - Setup Guides: `SONARQUBE_SETUP.md`, `GITHUB_CIRCLECI_SETUP.md`
 
 ---
 
@@ -175,109 +199,301 @@ GloBaPay/
 │   └── config.yml
 ├── .github/workflows/          # GitHub Actions
 │   └── security-ci.yml
+├── sonar-project.properties    # SonarQube/SonarCloud configuration
 ├── SECURITY_IMPLEMENTATION.md  # Detailed security documentation
 ├── SETUP.md                    # Setup instructions
+├── QUICK_START.md              # Quick start guide
+├── SONARQUBE_SETUP.md          # SonarQube setup guide
+├── GITHUB_CIRCLECI_SETUP.md    # CircleCI setup guide
+├── PROJECT_SUMMARY.md          # Project overview
 └── README.md                   # This file
 ```
 
 ---
 
-## 🚀 Setup and Installation
+## 🚀 Complete Setup and Installation Guide
+
+This guide will walk you through setting up and running the GloBaPay application from scratch.
 
 ### Prerequisites
 
-1. **Node.js** (v16 or higher) - [Download](https://nodejs.org/)
-2. **XAMPP** (for MySQL) - [Download](https://www.apachefriends.org/)
-3. **Git for Windows** - [Download](https://gitforwindows.org/)
+Before starting, ensure you have the following installed:
 
-### Installation Steps
+1. **Node.js** (v16 or higher)
+   - Download from: https://nodejs.org/
+   - Verify installation: `node --version`
+   - Verify npm: `npm --version`
 
-#### 1. Database Setup
+2. **XAMPP** (for MySQL database)
+   - Download from: https://www.apachefriends.org/
+   - Install and start MySQL service from XAMPP Control Panel
 
-Start XAMPP and create the database:
+3. **Git for Windows** (includes OpenSSL for certificate generation)
+   - Download from: https://gitforwindows.org/
+   - Verify installation: `git --version`
 
+4. **PowerShell** (should be pre-installed on Windows)
+   - Required for running setup scripts
+
+### Step-by-Step Installation
+
+#### Step 1: Clone or Extract the Repository
+
+If using Git:
 ```powershell
-# Start MySQL from XAMPP Control Panel
-# Then create database in phpMyAdmin or via command:
-CREATE DATABASE payment_portal;
+git clone <repository-url>
+cd GloBaPay
 ```
 
-#### 2. Backend Setup
+Or extract the ZIP file to your desired location (e.g., `C:\Users\Administrator\Desktop\GloBaPay`)
+
+#### Step 2: Database Setup
+
+1. **Start XAMPP and MySQL**:
+   - Open XAMPP Control Panel
+   - Click "Start" next to MySQL service
+   - Wait until MySQL shows as "Running" (green)
+
+2. **Create the Database**:
+   
+   **Option A: Using phpMyAdmin** (Recommended)
+   - Click "Admin" next to MySQL in XAMPP Control Panel
+   - This opens phpMyAdmin in your browser
+   - Click "New" in the left sidebar
+   - Database name: `payment_portal`
+   - Collation: `utf8mb4_unicode_ci`
+   - Click "Create"
+
+   **Option B: Using MySQL Command Line**:
+   ```powershell
+   # If MySQL is in your PATH
+   mysql -u root -e "CREATE DATABASE payment_portal CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+   ```
+
+#### Step 3: Backend Setup
+
+1. **Navigate to Backend Directory**:
+   ```powershell
+   cd app_backend
+   ```
+
+2. **Install Dependencies**:
+   ```powershell
+   npm install
+   ```
+   This may take a few minutes. Wait for it to complete.
+
+3. **Set Up Environment Variables**:
+   
+   The project includes a PowerShell script to generate secure keys automatically:
+   ```powershell
+   # Run the environment setup script
+   .\scripts\setup-env.ps1
+   ```
+   
+   **If you get a PowerShell execution policy error**, run this first:
+   ```powershell
+   Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+   ```
+   
+   This script will:
+   - Generate secure JWT secret
+   - Generate field encryption key
+   - Generate server-side pepper for password hashing
+   - Create a `.env` file with all required variables
+   - Set system environment variables (requires new terminal after running)
+   
+   **Important**: After running this script, you must open a **NEW** PowerShell terminal for environment variables to take effect.
+
+4. **Build the Backend**:
+   ```powershell
+   npm run build
+   ```
+   This compiles TypeScript to JavaScript.
+
+5. **Run Database Migrations**:
+   ```powershell
+   npm run migration:run
+   ```
+   This creates all database tables and structure.
+
+6. **Seed Initial Data**:
+   ```powershell
+   npm run seed:initial
+   ```
+   This creates test users (customer and employee accounts).
+
+   **Alternative**: You can also seed employees separately:
+   ```powershell
+   npm run seed:employees
+   ```
+
+#### Step 4: Generate SSL Certificates
+
+SSL certificates are required for HTTPS connections:
+
+1. **Navigate to Scripts Directory**:
+   ```powershell
+   # From app_backend directory
+   cd ..\scripts
+   ```
+
+2. **Generate Certificates**:
+   ```powershell
+   node generate-certs.js
+   ```
+   
+   This will:
+   - Create a `certificates` folder in the root directory
+   - Generate `localhost.pem` and `localhost-key.pem`
+   - Install certificates to your system's trusted certificate store (if mkcert is available)
+
+   **Note**: If you see certificate warnings in the browser, this is normal for self-signed certificates. Click "Advanced" → "Proceed to localhost" to continue.
+
+#### Step 5: Frontend Setup
+
+1. **Navigate to Root Directory**:
+   ```powershell
+   # From scripts directory
+   cd ..
+   # Or from anywhere: cd C:\Users\Administrator\Desktop\GloBaPay
+   ```
+
+2. **Install Dependencies**:
+   ```powershell
+   npm install
+   ```
+   This may take a few minutes.
+
+3. **Create Frontend Environment File**:
+   ```powershell
+   "HTTPS=true" | Out-File -FilePath .env -Encoding UTF8
+   ```
+   
+   Or manually create a `.env` file in the root directory with:
+   ```
+   HTTPS=true
+   ```
+
+### Running the Application
+
+You need to run both the backend and frontend servers. Open **two separate terminal windows**.
+
+#### Terminal 1: Start Backend Server
 
 ```powershell
 # Navigate to backend directory
 cd app_backend
 
-# Install dependencies
-npm install
-
-# Set up environment variables (generates JWT_SECRET, encryption keys)
-.\scripts\setup-env.ps1
-
-# Run database migrations
-npm run migration:run
-
-# Seed initial data (creates test users)
-npm run seed:initial
-```
-
-#### 3. Generate SSL Certificates
-
-```powershell
-# Return to root directory
-cd ..
-
-# Generate self-signed certificates
-cd scripts
-node generate-certs.js
-```
-
-#### 4. Frontend Setup
-
-```powershell
-# From root directory
-cd C:\Users\Administrator\Desktop\GloBaPay
-
-# Install dependencies
-npm install
-
-# Create frontend environment file
-"HTTPS=true" | Out-File -FilePath .env -Encoding UTF8
-```
-
-### Running the Application
-
-#### Start Backend (Terminal 1)
-
-```powershell
-cd app_backend
+# Start development server
 npm run dev
 ```
 
-Backend runs on: `https://localhost:5000`
+**Expected Output**:
+```
+✓ HTTPS server running on https://localhost:5000
+✓ Database connected
+✓ Server started successfully
+```
 
-#### Start Frontend (Terminal 2)
+**Backend URL**: `https://localhost:5000`
+
+**Health Check**: Open `https://localhost:5000/api/health` in your browser to verify the backend is running.
+
+#### Terminal 2: Start Frontend Server
 
 ```powershell
-# From root directory
+# Navigate to root directory (if not already there)
+cd C:\Users\Administrator\Desktop\GloBaPay
+
+# Start React development server
 npm start
 ```
 
-Frontend runs on: `https://localhost:3000`
+**Expected Output**:
+```
+Compiled successfully!
+You can now view the app in the browser.
+  Local:            https://localhost:3000
+```
+
+The browser should automatically open to `https://localhost:3000`. If not, manually navigate to this URL.
+
+**Frontend URL**: `https://localhost:3000`
+
+### Verification Steps
+
+After both servers are running, verify the setup:
+
+1. **Backend Health Check**:
+   - Open: `https://localhost:5000/api/health`
+   - Should show: `{"status":"ok","message":"Server is running"}`
+
+2. **Frontend Access**:
+   - Open: `https://localhost:3000`
+   - Should see the GloBaPay login page
+
+3. **Database Connection**:
+   - Check backend terminal for "Database connected" message
+   - No connection errors should appear
+
+### Quick Setup Alternative (If Scripts Are Available)
+
+If the setup scripts are properly configured, you can use these shortcuts:
+
+```powershell
+# Complete database setup (migrations + seeding)
+cd app_backend
+.\scripts\setup-database.ps1
+
+# Or use npm scripts
+npm run db:setup  # Runs migrations and seeds data
+```
+
+### Resetting the Database (If Needed)
+
+If you need to start fresh:
+
+```powershell
+cd app_backend
+
+# Complete reset (drops all tables and recreates)
+npm run db:reset
+
+# Or step by step
+npm run migration:revert  # Revert last migration
+npm run migration:run     # Run migrations again
+npm run seed:initial      # Reseed data
+```
 
 ---
 
 ## 👥 Test Accounts
 
+After running the seed scripts, the following test accounts are available:
+
 ### Customer Account
 - **Username**: `customer1`
 - **Password**: `Customer!234`
-- **Access**: Payment initiation, transaction history
+- **Role**: `customer`
+- **Access**: 
+  - User registration and login
+  - Payment initiation
+  - Transaction history viewing
+  - Payment method management
 
 ### Employee Account
 - **Username**: `ops_agent_1`
 - **Password**: `Employee!234`
-- **Access**: Pending transaction verification, SWIFT submission
+- **Role**: `employee`
+- **Access**: 
+  - Employee login (no registration)
+  - Pending transaction verification
+  - SWIFT code validation
+  - Payment approval and submission
+  - Audit trail access
+
+**Note**: Employee accounts are pre-created in the database and cannot register through the portal. Only customers can register.
 
 ---
 
@@ -375,19 +591,38 @@ npm test
 
 ## 📊 DevSecOps Pipeline
 
+The project includes a comprehensive CI/CD pipeline for automated security scanning, code quality analysis, and vulnerability detection.
+
 ### CircleCI Pipeline
 
+The CircleCI pipeline runs automatically on every push to the repository and includes:
+
 **Jobs**:
-1. **build-and-test**: Compile TypeScript, run tests, npm audit
-2. **sonarqube-scan**: Code quality and security analysis
-3. **security-scan**: Dependency vulnerability check
+1. **build-and-test**: 
+   - Installs dependencies (frontend & backend)
+   - Builds both frontend and backend projects
+   - Runs tests with coverage generation
+   - Performs npm audit for dependency vulnerabilities
+
+2. **sonarqube-scan**: 
+   - **Security Hotspots**: Identifies potential security vulnerabilities requiring manual review
+   - **Code Smells**: Detects maintainability issues and code quality problems
+   - **Bugs**: Finds reliability issues and potential runtime errors
+   - **Code Coverage**: Reports test coverage metrics
+   - **Maintainability Ratings**: Assesses technical debt and code quality
+
+3. **security-scan**: 
+   - OWASP dependency vulnerability checks
+   - Frontend and backend security audits
 
 **Configuration**: `.circleci/config.yml`
+
+**Setup Guide**: See `GITHUB_CIRCLECI_SETUP.md` for detailed setup instructions.
 
 ### GitHub Actions
 
 **Workflows**:
-1. **Build and Test**: Both frontend and backend
+1. **Build and Test**: Both frontend and backend compilation and testing
 2. **CodeQL Analysis**: Static code security scanning
 3. **OWASP ZAP**: Dynamic application security testing
 4. **npm Audit**: Vulnerability scanning
@@ -396,14 +631,37 @@ npm test
 
 ### SonarQube Integration
 
-**Scans**:
-- Security hotspots
-- Code smells
-- Vulnerabilities
-- Code coverage
-- Maintainability ratings
+SonarQube (via SonarCloud) provides automated code quality and security analysis:
+
+**What Gets Scanned**:
+- ✅ **Security Hotspots**: SQL injection risks, XSS vulnerabilities, authentication issues, encryption problems, and other security-sensitive code patterns
+- ✅ **Code Smells**: Code duplication, complexity issues, maintainability problems, and best practice violations
+- ✅ **Bugs**: Reliability issues that could cause runtime errors
+- ✅ **Code Coverage**: Test coverage metrics for both frontend and backend
+- ✅ **Technical Debt**: Quantified maintenance burden
+- ✅ **Maintainability Ratings**: Overall code quality assessment
 
 **Configuration**: `sonar-project.properties`
+
+**Setup Guide**: See `SONARQUBE_SETUP.md` for detailed SonarCloud setup and configuration.
+
+### Quick Setup
+
+1. **Connect to CircleCI**: Follow `GITHUB_CIRCLECI_SETUP.md`
+2. **Configure SonarCloud**: Follow `SONARQUBE_SETUP.md`
+3. **Add Environment Variables**: 
+   - Set `SONAR_TOKEN` in CircleCI context named `sonarcloud`
+   - Update `sonar-project.properties` with your project keys
+4. **Push to GitHub**: Pipeline runs automatically on push
+
+### Viewing Results
+
+- **CircleCI Dashboard**: Check pipeline status and build logs
+- **SonarCloud Dashboard**: View detailed analysis including:
+  - Security hotspots requiring review
+  - Code smells categorized by severity
+  - Coverage reports
+  - Quality gate status
 
 ---
 
@@ -411,8 +669,12 @@ npm test
 
 - **SECURITY_IMPLEMENTATION.md**: Detailed security measures documentation
 - **SETUP.md**: Complete setup instructions for Windows
-- **app_backend/docs/MIGRATIONS.md**: Database migration guide
-- **app_backend/docs/PRODUCTION-DEPLOYMENT.md**: Production deployment guide
+- **QUICK_START.md**: Quick start guide for local development
+- **SONARQUBE_SETUP.md**: Step-by-step guide for setting up SonarQube/SonarCloud integration
+- **GITHUB_CIRCLECI_SETUP.md**: Guide for connecting GitHub repository to CircleCI
+- **PROJECT_SUMMARY.md**: Comprehensive project overview and architecture
+- **app_backend/docs/MIGRATIONS.md**: Database migration guide (if exists)
+- **app_backend/docs/PRODUCTION-DEPLOYMENT.md**: Production deployment guide (if exists)
 
 ---
 
@@ -465,47 +727,214 @@ HTTPS=true
 
 ## 🔧 Troubleshooting
 
-### Database Connection Issues
+### Common Issues and Solutions
 
+#### 1. Database Connection Issues
+
+**Problem**: "Cannot connect to database" or "ECONNREFUSED"
+
+**Solutions**:
 ```powershell
-# Verify MySQL is running
-services.msc
+# Verify MySQL is running in XAMPP Control Panel
+# MySQL should show as "Running" (green)
 
-# Check database exists
-# In phpMyAdmin: CREATE DATABASE payment_portal;
+# Check if database exists
+# Open phpMyAdmin and verify "payment_portal" database exists
+# If not, create it: CREATE DATABASE payment_portal;
 
-# Test connection
+# Test database connection
 cd app_backend
 npm run migration:show
+
+# Check database credentials in .env file
+# Verify: DB_HOST=localhost, DB_PORT=3306, DB_USER=root, DB_NAME=payment_portal
 ```
 
-### Certificate Errors
+#### 2. Certificate Errors
 
+**Problem**: Browser shows "Not Secure" or certificate warnings
+
+**Solutions**:
 ```powershell
 # Regenerate certificates
 cd scripts
 node generate-certs.js
 
-# Verify certificate location
-dir ..\certificates
+# Verify certificates exist
+cd ..
+dir certificates
+
+# Should see: localhost.pem and localhost-key.pem
+
+# For self-signed certificates, you may need to:
+# - Click "Advanced" in browser
+# - Click "Proceed to localhost (unsafe)" or "Accept the risk"
 ```
 
-### Port Already in Use
+#### 3. Port Already in Use
 
+**Problem**: "Port 5000 already in use" or "Port 3000 already in use"
+
+**Solutions**:
 ```powershell
-# Find process using port 5000
+# Find process using port 5000 (backend)
 netstat -ano | findstr :5000
+# Note the PID number
 
-# Kill process (replace PID)
+# Find process using port 3000 (frontend)
+netstat -ano | findstr :3000
+# Note the PID number
+
+# Kill the process (replace <PID> with actual number)
 taskkill /PID <PID> /F
+
+# Or change the port in .env file:
+# PORT=5001  (for backend)
+# And update CORS_ORIGINS in backend .env
 ```
 
-### PowerShell Script Execution
+#### 4. PowerShell Script Execution Error
 
+**Problem**: "Cannot load file ... execution of scripts is disabled"
+
+**Solution**:
 ```powershell
-# Allow script execution
+# Allow script execution for current user
 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+# Verify the change
+Get-ExecutionPolicy -Scope CurrentUser
+# Should return: RemoteSigned
 ```
+
+#### 5. Environment Variables Not Loading
+
+**Problem**: "JWT_SECRET is not defined" or similar errors
+
+**Solutions**:
+```powershell
+# After running setup-env.ps1, you MUST open a NEW terminal
+# Environment variables are set for new processes only
+
+# Or create/update .env file manually in app_backend directory:
+# JWT_SECRET=your-secret-here
+# FIELD_ENCRYPTION_KEY=your-key-here
+# etc.
+
+# Verify .env file exists
+cd app_backend
+dir .env
+
+# Check contents
+type .env
+```
+
+#### 6. Migration Errors
+
+**Problem**: "Migration failed" or "Table already exists"
+
+**Solutions**:
+```powershell
+# Check migration status
+cd app_backend
+npm run migration:show
+
+# If tables exist but migration fails, you can:
+# Option 1: Reset database (WARNING: Deletes all data)
+npm run db:reset
+
+# Option 2: Drop and recreate database manually
+# In phpMyAdmin: Drop database payment_portal
+# Then: CREATE DATABASE payment_portal;
+# Then: npm run migration:run
+```
+
+#### 7. Module Not Found Errors
+
+**Problem**: "Cannot find module" or "Module not found"
+
+**Solutions**:
+```powershell
+# Reinstall dependencies
+cd app_backend
+rm -r node_modules
+rm package-lock.json
+npm install
+
+# Do the same for frontend
+cd ..
+rm -r node_modules
+rm package-lock.json
+npm install
+```
+
+#### 8. TypeScript Build Errors
+
+**Problem**: "Type errors" or "Build failed"
+
+**Solutions**:
+```powershell
+# Clean build
+cd app_backend
+rm -r dist
+npm run build
+
+# Check for TypeScript errors
+npx tsc --noEmit
+```
+
+#### 9. Rate Limiting (Too Many Login Attempts)
+
+**Problem**: "Too many login attempts. Please try again later."
+
+**Solution**:
+```powershell
+# Wait 15 minutes for rate limit to reset
+# Or restart the backend server to clear rate limit counters
+# In backend terminal: Ctrl+C to stop, then npm run dev to restart
+```
+
+#### 10. CORS Errors
+
+**Problem**: "CORS policy" errors in browser console
+
+**Solutions**:
+```powershell
+# Check backend .env file
+# CORS_ORIGINS should include: https://localhost:3000
+
+# Verify frontend is running on correct port
+# Default: https://localhost:3000
+
+# Restart backend after changing CORS settings
+```
+
+### Getting Help
+
+If you encounter other issues:
+
+1. **Check the logs**:
+   - Backend terminal for server errors
+   - Browser console (F12) for frontend errors
+   - Database connection messages
+
+2. **Verify prerequisites**:
+   - Node.js version: `node --version` (should be v16+)
+   - MySQL is running in XAMPP
+   - All dependencies installed
+
+3. **Review documentation**:
+   - `SETUP.md` for detailed setup instructions
+   - `QUICK_START.md` for quick reference
+   - `SECURITY_IMPLEMENTATION.md` for security details
+
+4. **Reset and start fresh**:
+   ```powershell
+   # Complete reset (use with caution)
+   cd app_backend
+   npm run db:reset
+   npm run seed:initial
+   ```
 
 ---
 
